@@ -19,7 +19,12 @@ void AirPodsModel::ingest(const AirPodsStatus& status, const QString& deviceAddr
     const bool wasBothInCase = m_status.bothInCase;
     const bool wasEarL = m_status.inEarLeft;
     const bool wasEarR = m_status.inEarRight;
-    const bool isNewDevice = !m_connected || deviceAddress != m_lastAddress;
+    // Don't key this off deviceAddress: AirPods have two independent BLE
+    // radios (one per earbud) and Apple rotates the advertising address
+    // periodically, so the "same" connected AirPods legitimately show up
+    // under a different address mid-session - that used to be misread as a
+    // brand new device and re-triggered the popup at random.
+    const bool isNewDevice = !m_connected;
 
     m_status = status;
     m_lastAddress = deviceAddress;

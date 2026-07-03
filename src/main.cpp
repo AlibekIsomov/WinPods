@@ -3,8 +3,7 @@
 #include <QQmlContext>
 #include <QSystemTrayIcon>
 #include <QMenu>
-#include <QPainter>
-#include <QPixmap>
+#include <QIcon>
 
 #include <winrt/base.h>
 
@@ -13,21 +12,6 @@
 #include "AirPodsModel.h"
 #include "MediaController.h"
 
-namespace {
-QIcon makeTrayIcon() {
-    // ponytail: placeholder dot so the app runs with zero bundled assets -
-    // swap for real tray artwork whenever it's ready.
-    QPixmap pixmap(32, 32);
-    pixmap.fill(Qt::transparent);
-    QPainter p(&pixmap);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setBrush(Qt::white);
-    p.setPen(Qt::NoPen);
-    p.drawEllipse(4, 4, 24, 24);
-    return QIcon(pixmap);
-}
-}
-
 int main(int argc, char* argv[]) {
     // MTA: BluetoothLEAdvertisementWatcher callbacks arrive on thread-pool
     // threads, not the Qt/GUI thread.
@@ -35,6 +19,9 @@ int main(int argc, char* argv[]) {
 
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false); // keep running in the tray with no window open
+
+    const QIcon appIcon(":/resources/AirPods.ico");
+    app.setWindowIcon(appIcon);
 
     AirPodsModel model;
     MediaController mediaController;
@@ -59,7 +46,7 @@ int main(int argc, char* argv[]) {
     QAction* quitAction = menu.addAction("Quit");
     QObject::connect(quitAction, &QAction::triggered, &app, &QApplication::quit);
 
-    QSystemTrayIcon tray(makeTrayIcon());
+    QSystemTrayIcon tray(appIcon);
     tray.setContextMenu(&menu); // right-click: Quit menu
     tray.setToolTip("WinPods");
     QObject::connect(&tray, &QSystemTrayIcon::activated, &model,

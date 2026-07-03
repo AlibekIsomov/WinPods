@@ -20,6 +20,7 @@ qt_add_executable(WinPods WIN32
     src/AirPodsModel.h
     src/MediaController.cpp
     src/MediaController.h
+    resources/app.rc # gives the built .exe its Explorer/taskbar icon
 )
 
 qt_add_qml_module(WinPods
@@ -30,6 +31,13 @@ qt_add_qml_module(WinPods
         qml/AirPodIcon.qml
         qml/CaseIcon.qml
         qml/BatteryGlyph.qml
+)
+
+# Embeds the icon into the binary so code can load it via ":/AirPods.ico"
+# (tray icon, window icon) without needing the file at runtime.
+qt_add_resources(WinPods "app_icon"
+    PREFIX "/"
+    FILES resources/AirPods.ico
 )
 
 target_link_libraries(WinPods PRIVATE
