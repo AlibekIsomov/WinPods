@@ -65,7 +65,7 @@ Window {
 
         Text {
             id: title
-            text: airpodsModel.modelName
+            text: airpodsModel.connected ? airpodsModel.modelName : "Searching for AirPods…"
             anchors.top: parent.top
             anchors.topMargin: 24
             anchors.horizontalCenter: parent.horizontalCenter
@@ -73,8 +73,24 @@ Window {
             color: "#3a3a3c"
         }
 
+        // AirPods only broadcast their battery/status data in short bursts -
+        // when the case opens/closes or a pod goes in/out of the ear - not
+        // continuously while just sitting connected. If we haven't caught one
+        // of those bursts yet, say so instead of showing an empty battery row.
+        Text {
+            visible: !airpodsModel.connected
+            anchors.centerIn: parent
+            width: parent.width - 60
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: "Open the case, or take a pod out and back in, near this PC to refresh."
+            font.pixelSize: 14
+            color: "#8e8e93"
+        }
+
         RowLayout {
             id: iconsRow
+            visible: airpodsModel.connected
             anchors.top: title.bottom
             anchors.topMargin: 26
             anchors.horizontalCenter: parent.horizontalCenter
