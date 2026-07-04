@@ -1,5 +1,7 @@
 #include "BleScanner.h"
 
+#include <QDebug>
+
 using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Storage::Streams;
 
@@ -23,8 +25,17 @@ BleScanner::~BleScanner() {
 }
 
 void BleScanner::start() {
-    if (m_watcher.Status() != BluetoothLEAdvertisementWatcherStatus::Started)
-        m_watcher.Start();
+    // Start() throws (e.g. E_DEVICE_NOT_AVAILABLE) when the Bluetooth radio
+    // is off or unavailable; without a handler the winrt exception fail-fasts
+    // the whole app. Stay alive in the tray instead - scanning just won't
+    // deliver anything until the radio comes back and start() is retried.
+    try {
+        if (m_watcher.Status() != BluetoothLEAdvertisementWatcherStatus::Started)
+            m_watcher.Start();
+    } catch (winrt::hresult_error const& e) {
+        qWarning() << "BleScanner: failed to start BLE watcher:"
+                   << QString::fromWCharArray(e.message().c_str());
+    }
 }
 
 void BleScanner::stop() {

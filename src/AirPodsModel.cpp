@@ -26,6 +26,16 @@ void AirPodsModel::ingest(const AirPodsStatus& status, const QString& deviceAddr
     // brand new device and re-triggered the popup at random.
     const bool isNewDevice = !m_connected;
 
+    // AirPods beacon about once a second while the lid is open or a pod is in
+    // use, and go silent within a couple of seconds of the lid closing. So a
+    // fresh advert after several seconds of silence means the user just did
+    // something (usually: opened the case again) - even inside the 15s stale
+    // window, where isNewDevice can't fire and the bothInCase edge below is
+    // missed because the pods never left the case.
+    const bool resumedAfterGap =
+        m_sinceLastAdvert.isValid() && m_sinceLastAdvert.elapsed() > 5000;
+    m_sinceLastAdvert.restart();
+
     m_status = status;
     m_lastAddress = deviceAddress;
     m_staleTimer.start();
@@ -36,9 +46,10 @@ void AirPodsModel::ingest(const AirPodsStatus& status, const QString& deviceAddr
     }
     emit statusChanged();
 
-    // Popup appears like on iOS: a fresh device shows up nearby, or the case
-    // was closed (both pods seated+charging) and has now been opened again.
-    if (isNewDevice || (wasBothInCase && !status.bothInCase))
+    // Popup appears like on iOS: a fresh device shows up nearby, the beacons
+    // resumed after a silence gap (case reopened), or the case was closed
+    // (both pods seated+charging) and has now been opened again.
+    if (isNewDevice || resumedAfterGap || (wasBothInCase && !status.bothInCase))
         setPopupVisible(true);
 
     if (wasEarL != status.inEarLeft || wasEarR != status.inEarRight)

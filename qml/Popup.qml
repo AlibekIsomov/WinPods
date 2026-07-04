@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtMultimedia
 
 // Frameless, transparent, always-on-top window that mimics the iOS "AirPods
 // connected" sheet: parked below the screen, slides up when the model says
@@ -88,65 +89,94 @@ Window {
             color: "#8e8e93"
         }
 
-        RowLayout {
-            id: iconsRow
+        // Spinning product render (pods on the left half, case on the right),
+        // picked to match the detected model; generations we have no clip for
+        // fall back to the 2nd-gen one as the closest generic look.
+        Column {
+            id: mediaBlock
             visible: airpodsModel.connected
             anchors.top: title.bottom
-            anchors.topMargin: 26
+            anchors.topMargin: 14
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 46
+            width: Math.round(parent.width * 0.68) // leave the card some air
+            spacing: 16
 
-            ColumnLayout {
-                id: leftPodColumn
-                spacing: 12
-                AirPodIcon { id: leftPod; Layout.alignment: Qt.AlignHCenter; mirrored: false }
-                BatteryGlyph {
-                    Layout.alignment: Qt.AlignHCenter
-                    level: airpodsModel.batteryLeft
-                    charging: airpodsModel.chargingLeft
+            readonly property url videoSource: {
+                const m = airpodsModel.modelName
+                if (m.indexOf("1st") !== -1) return "qrc:/videos/AirPods_1.avi"
+                if (m.indexOf("3rd") !== -1) return "qrc:/videos/AirPods_3.avi"
+                return "qrc:/videos/AirPods_2.avi"
+            }
+
+            Item {
+                width: parent.width
+                height: width / 2 // the clips are 2:1
+
+                MediaPlayer {
+                    id: player
+                    // Don't touch the media stack until there's something to
+                    // show - loading at startup spins up decoders while the
+                    // popup is still parked off-screen.
+                    source: airpodsModel.connected ? mediaBlock.videoSource : ""
+                    videoOutput: videoOut
+                    loops: MediaPlayer.Infinite
+                    // A model change mid-display swaps the source, which stops
+                    // playback; kick it off again if we're still on screen.
+                    onSourceChanged: if (airpodsModel.popupVisible) play()
+                }
+                VideoOutput {
+                    id: videoOut
+                    anchors.fill: parent
                 }
             }
-            ColumnLayout {
-                id: rightPodColumn
-                spacing: 12
-                AirPodIcon { id: rightPod; Layout.alignment: Qt.AlignHCenter; mirrored: true }
-                BatteryGlyph {
-                    Layout.alignment: Qt.AlignHCenter
-                    level: airpodsModel.batteryRight
-                    charging: airpodsModel.chargingRight
+
+            Row {
+                // Wider than the clip so the readouts spread outward, sitting
+                // under the pods on the left and the case on the right rather
+                // than bunching up in the middle.
+                width: Math.round(card.width * 0.85)
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Item { // battery readouts sit under the halves they describe
+                    width: parent.width / 2
+                    height: 22
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 24
+                        BatteryGlyph {
+                            level: airpodsModel.batteryLeft
+                            charging: airpodsModel.chargingLeft
+                        }
+                        BatteryGlyph {
+                            level: airpodsModel.batteryRight
+                            charging: airpodsModel.chargingRight
+                        }
+                    }
                 }
-            }
-            ColumnLayout {
-                id: caseColumn
-                spacing: 12
-                CaseIcon { id: caseIcon; Layout.alignment: Qt.AlignHCenter }
-                BatteryGlyph {
-                    Layout.alignment: Qt.AlignHCenter
-                    level: airpodsModel.batteryCase
-                    charging: airpodsModel.chargingCase
+                Item {
+                    width: parent.width / 2
+                    height: 22
+                    BatteryGlyph {
+                        anchors.centerIn: parent
+                        level: airpodsModel.batteryCase
+                        charging: airpodsModel.chargingCase
+                    }
                 }
             }
         }
 
-        // Staggered "assemble in" reveal: each icon scales/fades up in turn
-        // (left pod, then right pod, then case) whenever the popup opens -
-        // a 2D stand-in for the case's real 3D spin-in animation.
+        // Reveal: the whole media block scales/fades up when the popup opens,
+        // and the spin clip restarts from its first frame.
         function playRevealAnimation() {
-            revealLeft.restart()
-            revealRight.restart()
-            revealCase.restart()
+            player.position = 0
+            player.play()
+            revealAnim.restart()
         }
 
-        ScaleAnimator { id: revealLeft; target: leftPodColumn; from: 0.5; to: 1.0; duration: 260; easing.type: Easing.OutBack }
-        SequentialAnimation {
-            id: revealRight
-            PauseAnimation { duration: 90 }
-            ScaleAnimator { target: rightPodColumn; from: 0.5; to: 1.0; duration: 260; easing.type: Easing.OutBack }
-        }
-        SequentialAnimation {
-            id: revealCase
-            PauseAnimation { duration: 180 }
-            ScaleAnimator { target: caseColumn; from: 0.5; to: 1.0; duration: 260; easing.type: Easing.OutBack }
+        ParallelAnimation {
+            id: revealAnim
+            ScaleAnimator { target: mediaBlock; from: 0.85; to: 1.0; duration: 260; easing.type: Easing.OutBack }
+            OpacityAnimator { target: mediaBlock; from: 0.0; to: 1.0; duration: 220 }
         }
     }
 
@@ -158,6 +188,7 @@ Window {
                 card.playRevealAnimation()
             } else {
                 popup.slideOut()
+                player.pause() // no point spinning while parked off-screen
             }
         }
     }

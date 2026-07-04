@@ -13,9 +13,11 @@
 #include "MediaController.h"
 
 int main(int argc, char* argv[]) {
-    // MTA: BluetoothLEAdvertisementWatcher callbacks arrive on thread-pool
-    // threads, not the Qt/GUI thread.
-    winrt::init_apartment();
+    // STA: Qt's Windows integration calls OleInitialize, which requires the
+    // GUI thread to be single-threaded apartment (MTA here aborts startup with
+    // "Cannot change thread mode after it is set"). The BLE watcher doesn't
+    // care - its Received callbacks arrive on thread-pool threads either way.
+    winrt::init_apartment(winrt::apartment_type::single_threaded);
 
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false); // keep running in the tray with no window open

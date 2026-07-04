@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QString>
+#include <QElapsedTimer>
 
 #include "AirPodsParser.h"
 
@@ -61,4 +62,5 @@ private:
 
     QTimer m_autoHideTimer; // popup dismisses itself after a few seconds, like iOS
     QTimer m_staleTimer;    // no advert for a while -> treat as disconnected/out of range
+    QElapsedTimer m_sinceLastAdvert; // silence gaps mark user interaction (lid open etc.)
 };

@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 
 # Requires the "C++/WinRT" + "Windows 10/11 SDK" components of the VS
 # workload (winrt/*.h headers ship inside the SDK since 10.0.19041).
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets Multimedia)
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(WinPods WIN32
@@ -28,8 +28,6 @@ qt_add_qml_module(WinPods
     VERSION 1.0
     QML_FILES
         qml/Popup.qml
-        qml/AirPodIcon.qml
-        qml/CaseIcon.qml
         qml/BatteryGlyph.qml
 )
 
@@ -40,12 +38,23 @@ qt_add_resources(WinPods "app_icon"
     FILES resources/AirPods.ico
 )
 
+# Per-model spin animations shown in the popup instead of drawn icons.
+qt_add_resources(WinPods "videos"
+    PREFIX "/videos"
+    BASE resources
+    FILES
+        resources/AirPods_1.avi
+        resources/AirPods_2.avi
+        resources/AirPods_3.avi
+)
+
 target_link_libraries(WinPods PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
     Qt6::Widgets
+    Qt6::Multimedia
     windowsapp # umbrella import lib for all projected WinRT namespaces
 )
 
